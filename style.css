@@ -36,6 +36,7 @@ header {
   opacity: 0.5;
   color: #c0a070;
   font-weight: 300;
+  -webkit-user-select: none;
   user-select: none;
 }
 .left-leaf  { left: 0.5rem; transform: translateY(-50%) scaleX(-1); }
