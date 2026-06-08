@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <!-- Header with text symbols-->
+  <!-- Header with text symbols -->
   <header>
     <div class="leaf-accent left-leaf">✤</div>
     <div class="leaf-accent right-leaf">✤</div>
@@ -57,24 +57,29 @@
     <section class="form-card">
       <h2>Add Food Item</h2>
 
+      <!-- API Search Section -->
+      <div class="api-search-section">
+        <input type="text" id="apiSearchInput" placeholder="Search any food (e.g., pizza, apple)" />
+        <button id="apiSearchBtn" class="secondary-btn">Search API</button>
+        <div id="apiResults" class="api-results hidden"></div>
+      </div>
+
       <!-- Quick search suggestions -->
       <div class="suggestions-section">
         <p class="suggestions-label">Quick Add</p>
         <div class="suggestions-buttons" id="suggestions"></div>
       </div>
 
+      <!-- Form row with autofill button -->
       <div class="form-row">
         <div class="input-field">
-          <input type="text" id="foodName"
-            placeholder="Food name (e.g. Banana)"
-            class="food-input"
-            autocomplete="off" />
+          <div class="name-with-autofill">
+            <input type="text" id="foodName" placeholder="Food name (e.g. Banana)" class="food-input" autocomplete="off" />
+            <button type="button" id="autoFillApiBtn" class="api-auto-btn">Autofill</button>
+          </div>
         </div>
         <div class="input-field-small">
-          <input type="number" id="foodCalories"
-            placeholder="Calories"
-            class="food-input"
-            min="1" max="9999" />
+          <input type="number" id="foodCalories" placeholder="Calories" class="food-input" min="1" max="9999" />
         </div>
         <button id="addBtn" class="add-btn">+ Add</button>
       </div>
