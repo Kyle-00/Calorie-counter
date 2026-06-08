@@ -218,6 +218,84 @@ header h1 {
   color: #2c1a0e;
   font-weight: 600;
 }
+
+/* ========== NEW API SEARCH SECTION ========== */
+.api-search-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+  background: #faf7f2;
+  padding: 0.8rem;
+  border-radius: 20px;
+}
+#apiSearchInput {
+  flex: 2;
+  padding: 0.6rem 1rem;
+  border: 1px solid #e0cdb4;
+  border-radius: 40px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  background: white;
+  outline: none;
+  transition: 0.2s;
+}
+#apiSearchInput:focus {
+  border-color: #e07b39;
+}
+.secondary-btn {
+  background: #f5ede0;
+  border: 1px solid #e0cdb4;
+  border-radius: 40px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: #7a5c38;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.secondary-btn:hover {
+  background: #eedfc8;
+  border-color: #c89a6a;
+}
+.api-results {
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e0cdb4;
+  border-radius: 20px;
+  background: white;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.api-results.hidden {
+  display: none;
+}
+.api-result-item {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f0e4d4;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  transition: background 0.1s;
+}
+.api-result-item:last-child {
+  border-bottom: none;
+}
+.api-result-item:hover {
+  background: #faf4ec;
+}
+.api-result-name {
+  font-weight: 500;
+  color: #2c1a0e;
+}
+.api-result-cal {
+  color: #e07b39;
+  font-weight: 500;
+}
+/* ========== END API SECTION ========== */
+
 .suggestions-section {
   margin-bottom: 1rem;
 }
@@ -253,6 +331,7 @@ header h1 {
   transform: translateY(-1px);
 }
 
+/* Form row (with autofill button) */
 .form-row {
   display: flex;
   gap: 0.8rem;
@@ -263,6 +342,39 @@ header h1 {
   flex: 2;
   min-width: 140px;
 }
+/* NEW: container for name + autofill button */
+.name-with-autofill {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+.name-with-autofill .food-input {
+  flex: 1;
+}
+/* Autofill button style */
+.api-auto-btn {
+  background: #e07b39;
+  color: white;
+  border: none;
+  border-radius: 40px;
+  padding: 0 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, transform 0.1s;
+  font-family: 'DM Sans', sans-serif;
+}
+.api-auto-btn:hover {
+  background: #c96428;
+  transform: scale(0.97);
+}
+.api-auto-btn:disabled {
+  background: #c0a070;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .input-field-small {
   flex: 1;
   min-width: 90px;
@@ -461,6 +573,12 @@ header h1 {
   }
   .form-row {
     flex-direction: column;
+  }
+  .name-with-autofill {
+    width: 100%;
+  }
+  .api-auto-btn {
+    padding: 0 0.8rem;
   }
   .add-btn {
     width: 100%;
