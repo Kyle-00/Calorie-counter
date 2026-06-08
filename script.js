@@ -1,4 +1,5 @@
 // NutriTrack – Calorie Counter Logic with Open Food Facts API (no emojis)
+// Only autofill button – no separate search box
 (function() {
   // DOM elements (existing)
   const totalCaloriesSpan = document.getElementById('totalCalories');
@@ -16,10 +17,7 @@
   const suggestionsContainer = document.getElementById('suggestions');
   const toast = document.getElementById('toast');
 
-  // API search elements
-  const apiSearchInput = document.getElementById('apiSearchInput');
-  const apiSearchBtn = document.getElementById('apiSearchBtn');
-  const apiResultsDiv = document.getElementById('apiResults');
+  // Autofill button only (no search input or results div)
   const autoFillApiBtn = document.getElementById('autoFillApiBtn');
 
   // Data
@@ -235,67 +233,9 @@
     });
   }
 
-  // ========== API FUNCTIONALITY ==========
+  // ========== AUTOFILL API FUNCTIONALITY (no separate search) ==========
 
-  // Hide the results dropdown
-  function hideApiResults() {
-    apiResultsDiv.classList.add('hidden');
-    apiResultsDiv.innerHTML = '';
-  }
-
-  // Display results from API
-  function displayApiResults(products) {
-    if (!products || products.length === 0) {
-      apiResultsDiv.innerHTML = '<div class="api-result-item">No products found</div>';
-      apiResultsDiv.classList.remove('hidden');
-      return;
-    }
-
-    apiResultsDiv.innerHTML = '';
-    let resultCount = 0;
-    // Show first 8 results with calorie data
-    for (const product of products) {
-      if (resultCount >= 8) break;
-      const productName = product.product_name || product.generic_name || 'Unknown product';
-      // Extract calories per 100g (energy in kcal)
-      let calories = null;
-      if (product.nutriments) {
-        const energyKcal = product.nutriments['energy-kcal'];
-        const energy = product.nutriments.energy;
-        if (energyKcal && !isNaN(parseFloat(energyKcal))) {
-          calories = Math.round(parseFloat(energyKcal));
-        } else if (energy && typeof energy === 'string' && energy.includes('kcal')) {
-          const match = energy.match(/(\d+)/);
-          if (match) calories = parseInt(match[1]);
-        } else if (energy && !isNaN(parseFloat(energy))) {
-          calories = Math.round(parseFloat(energy));
-        }
-      }
-      if (!calories || calories <= 0) continue;
-
-      const div = document.createElement('div');
-      div.className = 'api-result-item';
-      div.innerHTML = `
-        <span class="api-result-name">${escapeHtml(productName)}</span>
-        <span class="api-result-cal">${calories} kcal / 100g</span>
-      `;
-      div.addEventListener('click', () => {
-        foodNameInput.value = productName;
-        foodCaloriesInput.value = calories;
-        hideApiResults();
-        showToast(`Selected: ${productName} (${calories} kcal per 100g)`);
-      });
-      apiResultsDiv.appendChild(div);
-      resultCount++;
-    }
-
-    if (apiResultsDiv.children.length === 0) {
-      apiResultsDiv.innerHTML = '<div class="api-result-item">No calorie data available for these results</div>';
-    }
-    apiResultsDiv.classList.remove('hidden');
-  }
-
-  // Simple escape to prevent XSS
+  // Escape HTML to prevent XSS
   function escapeHtml(str) {
     return str.replace(/[&<>]/g, function(m) {
       if (m === '&') return '&amp;';
@@ -305,31 +245,7 @@
     });
   }
 
-  // Search API and show dropdown
-  async function searchFoodApi(query) {
-    if (!query.trim()) {
-      showToast('Please enter a food name to search');
-      return;
-    }
-
-    apiResultsDiv.innerHTML = '<div class="api-result-item">Searching...</div>';
-    apiResultsDiv.classList.remove('hidden');
-
-    try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=15`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      const products = data.products || [];
-      displayApiResults(products);
-    } catch (error) {
-      console.error('API error:', error);
-      showToast('Failed to fetch from API. Check your connection.');
-      hideApiResults();
-    }
-  }
-
-  // Autofill the best match from API (one‑click)
+  // Autofill the best match from API (one click)
   async function autoFillFromApi() {
     const query = foodNameInput.value.trim();
     if (!query) {
@@ -342,16 +258,26 @@
     autoFillApiBtn.disabled = true;
 
     try {
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`;
+      // Force English results with &lc=en
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&lc=en`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
       const products = data.products || [];
 
       let bestProduct = null;
       for (const product of products) {
-        const name = product.product_name || product.generic_name;
+        // Get best available name: prefer English, then brands, generic, or product_name
+        let name = product.product_name_en;
+        if (!name && product.brands) name = product.brands;
+        if (!name && product.generic_name) name = product.generic_name;
+        if (!name) name = product.product_name;
         if (!name) continue;
+        
         let calories = null;
         if (product.nutriments) {
           const kcal = product.nutriments['energy-kcal'];
@@ -382,37 +308,17 @@
       }
     } catch (error) {
       console.error('Autofill API error:', error);
-      showToast('Failed to fetch from API. Check your connection.');
+      showToast('Autofill failed: ' + error.message);
     } finally {
       autoFillApiBtn.textContent = originalText;
       autoFillApiBtn.disabled = false;
     }
   }
 
-  // Event listeners for API
-  if (apiSearchBtn) {
-    apiSearchBtn.addEventListener('click', () => {
-      searchFoodApi(apiSearchInput.value);
-    });
-  }
-  if (apiSearchInput) {
-    apiSearchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        searchFoodApi(apiSearchInput.value);
-      }
-    });
-  }
+  // Event listener for autofill button
   if (autoFillApiBtn) {
     autoFillApiBtn.addEventListener('click', autoFillFromApi);
   }
-
-  // Click outside results to hide
-  document.addEventListener('click', (e) => {
-    if (apiResultsDiv && !apiResultsDiv.contains(e.target) && e.target !== apiSearchInput && e.target !== apiSearchBtn) {
-      hideApiResults();
-    }
-  });
 
   // Set today's date
   function setTodayDate() {
