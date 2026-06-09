@@ -1,7 +1,7 @@
 // NutriTrack – Calorie Counter Logic with Open Food Facts API (no emojis)
-// Only autofill button – no separate search box
+// Autofill only – strict English names + relevance ranking
 (function() {
-  // DOM elements (existing)
+  // DOM elements
   const totalCaloriesSpan = document.getElementById('totalCalories');
   const remainingSpan = document.getElementById('remaining');
   const itemCountSpan = document.getElementById('itemCount');
@@ -17,11 +17,11 @@
   const suggestionsContainer = document.getElementById('suggestions');
   const toast = document.getElementById('toast');
 
-  // Autofill button only (no search input or results div)
+  // Autofill button
   const autoFillApiBtn = document.getElementById('autoFillApiBtn');
 
   // Data
-  let foodEntries = [];      // each entry: { id, name, calories, timestamp }
+  let foodEntries = [];
   let dailyGoal = 2000;
 
   // Helper: show toast message
@@ -44,7 +44,6 @@
     const savedEntries = localStorage.getItem('nutritrack_entries');
     if (savedEntries) {
       foodEntries = JSON.parse(savedEntries);
-      // Validate each entry structure
       foodEntries = foodEntries.filter(e => e && typeof e.name === 'string' && typeof e.calories === 'number');
     } else {
       foodEntries = [];
@@ -59,7 +58,7 @@
     }
   }
 
-  // Update all UI: totals, ring, list, remaining, item count
+  // Update all UI
   function updateUI() {
     const total = foodEntries.reduce((sum, entry) => sum + entry.calories, 0);
     const remaining = Math.max(0, dailyGoal - total);
@@ -69,9 +68,8 @@
     remainingSpan.textContent = remaining;
     itemCountSpan.textContent = itemCount;
 
-    // Update ring progress
     const percent = Math.min(1, total / dailyGoal);
-    const circumference = 314; // 2 * PI * 50 ≈ 314.159
+    const circumference = 314;
     const dashoffset = circumference * (1 - percent);
     ringProgress.style.strokeDashoffset = dashoffset;
     if (total > dailyGoal) {
@@ -80,7 +78,6 @@
       ringProgress.classList.remove('over-goal');
     }
 
-    // Update list visibility and render items
     if (foodEntries.length === 0) {
       foodListEl.classList.add('hidden');
       emptyStateDiv.classList.remove('hidden');
@@ -90,25 +87,22 @@
       renderFoodList();
     }
 
-    // Persist data
     saveData();
   }
 
-  // Render the food list (with remove buttons)
+  // Render food list
   function renderFoodList() {
     if (!foodListEl) return;
     foodListEl.innerHTML = '';
-    // Sort by timestamp descending (newest first)
     const sorted = [...foodEntries].sort((a,b) => b.timestamp - a.timestamp);
     for (const entry of sorted) {
       const li = document.createElement('li');
       li.className = 'food-item';
       li.dataset.id = entry.id;
 
-      // Icon placeholder (text symbol)
       const iconSpan = document.createElement('div');
       iconSpan.className = 'food-item-icon';
-      iconSpan.textContent = '•';   // simple dot symbol
+      iconSpan.textContent = '•';
 
       const nameSpan = document.createElement('div');
       nameSpan.className = 'food-item-name';
@@ -141,7 +135,7 @@
     }
   }
 
-  // Remove entry by id
+  // Remove entry
   function removeFoodEntry(id) {
     const index = foodEntries.findIndex(e => e.id == id);
     if (index !== -1) {
@@ -177,7 +171,6 @@
     foodEntries.push(newEntry);
     updateUI();
 
-    // Clear inputs
     foodNameInput.value = '';
     foodCaloriesInput.value = '';
     foodNameInput.focus();
@@ -185,7 +178,7 @@
     showToast(`+ ${name} (${calories} kcal) added`);
   }
 
-  // Reset day: clear all entries
+  // Reset day
   function resetDay() {
     if (foodEntries.length === 0) {
       showToast('No entries to clear');
@@ -198,7 +191,7 @@
     }
   }
 
-  // Update goal when input changes
+  // Update daily goal
   function updateGoal() {
     let newGoal = parseInt(goalInput.value, 10);
     if (isNaN(newGoal)) newGoal = 2000;
@@ -209,7 +202,7 @@
     showToast(`Daily goal set to ${dailyGoal} kcal`);
   }
 
-  // Predefined suggestions (no emojis)
+  // Predefined suggestions
   const suggestionsList = [
     { name: 'Apple', calories: 95 },
     { name: 'Banana', calories: 105 },
@@ -233,19 +226,30 @@
     });
   }
 
-  // ========== AUTOFILL API FUNCTIONALITY (no separate search) ==========
+  // ========== AUTOFILL WITH RELEVANCE RANKING ==========
 
-  // Escape HTML to prevent XSS
-  function escapeHtml(str) {
-    return str.replace(/[&<>]/g, function(m) {
-      if (m === '&') return '&amp;';
-      if (m === '<') return '&lt;';
-      if (m === '>') return '&gt;';
-      return m;
-    });
+  // Score how well a product name matches the search query
+  function relevanceScore(productName, query) {
+    const nameLower = productName.toLowerCase();
+    const queryLower = query.toLowerCase();
+    
+    // Exact match (case-insensitive) – highest score
+    if (nameLower === queryLower) return 100;
+    
+    // Name starts with query
+    if (nameLower.startsWith(queryLower)) return 80;
+    
+    // Query is a separate word in the name (e.g., "chicken breast" for query "chicken")
+    const words = nameLower.split(/\s+/);
+    if (words.some(word => word === queryLower)) return 70;
+    
+    // Name contains query as substring
+    if (nameLower.includes(queryLower)) return 50;
+    
+    // No match
+    return 0;
   }
 
-  // Autofill the best match from API (one click)
   async function autoFillFromApi() {
     const query = foodNameInput.value.trim();
     if (!query) {
@@ -258,25 +262,24 @@
     autoFillApiBtn.disabled = true;
 
     try {
-      // Force English results with &lc=en
-      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10&lc=en`;
+      const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&lc=en`;
       const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      
       const data = await response.json();
       const products = data.products || [];
 
-      let bestProduct = null;
+      console.group(' Autofill with relevance ranking');
+      console.log('Search query:', query);
+      console.log('Total products:', products.length);
+
+      // Collect candidates that have English name and calories
+      const candidates = [];
       for (const product of products) {
-        // Get best available name: prefer English, then brands, generic, or product_name
-        let name = product.product_name_en;
-        if (!name && product.brands) name = product.brands;
-        if (!name && product.generic_name) name = product.generic_name;
-        if (!name) name = product.product_name;
-        if (!name) continue;
+        const englishName = product.product_name_en;
+        if (!englishName || englishName.trim() === '') continue;
         
         let calories = null;
         if (product.nutriments) {
@@ -293,18 +296,26 @@
           }
         }
         if (calories && calories > 0) {
-          bestProduct = { name, calories };
-          break;
+          const score = relevanceScore(englishName, query);
+          candidates.push({ name: englishName, calories, score });
+          console.log(`Candidate: "${englishName}" (score ${score})`);
         }
       }
 
-      if (bestProduct) {
+      // Sort by score descending, then pick the highest
+      candidates.sort((a, b) => b.score - a.score);
+      const bestProduct = candidates[0];
+
+      console.log('Best match:', bestProduct);
+      console.groupEnd();
+
+      if (bestProduct && bestProduct.score > 0) {
         foodNameInput.value = bestProduct.name;
         foodCaloriesInput.value = bestProduct.calories;
         showToast(`Autofilled: ${bestProduct.name} (${bestProduct.calories} kcal per 100g)`);
         formError.classList.add('hidden');
       } else {
-        showToast(`No calorie data found for "${query}". Try a different name.`);
+        showToast(`No relevant match for "${query}". Try a different name (e.g., "apple" instead of "aple").`);
       }
     } catch (error) {
       console.error('Autofill API error:', error);
